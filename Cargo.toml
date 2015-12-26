@@ -1,0 +1,8 @@
+[package]
+authors = ["Mickaël RAYBAUD-ROIG <raybaudroigm@gmail.com>"]
+name = "stdio_logger"
+version = "0.1.0"
+
+[dependencies]
+log = "0.3.*"
+term-painter = "0.2.1"
