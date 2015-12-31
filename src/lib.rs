@@ -3,10 +3,9 @@ extern crate term_painter;
 
 use std::io;
 use std::io::Write;
-use std::cell::RefCell;
 use term_painter::{Painted, ToStyle};
-use term_painter::Color::{NotSet, Red, BrightRed, Yellow};
-use log::{Log, LogLevel, MaxLogLevelFilter, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
+use term_painter::Color::{NotSet, Yellow};
+use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
 use std::ascii::AsciiExt;
 
 
@@ -22,8 +21,8 @@ impl Logger {
         }
     }
 
-    pub fn set_level(&mut self, level: LogLevelFilter) -> &mut Self {
-        self.level = level;
+    pub fn set_level(&mut self, level: LogLevel) -> &mut Self {
+        self.level = level.to_log_level_filter();
         self
     }
 
@@ -74,21 +73,21 @@ impl Log for Logger {
             return;
         }
 
-        if record.level() < LogLevel::Info {
-            writeln!(&mut io::stderr(), "{}{}{}", self.format_level(record), self.format_location(record), record.args());
+        if record.level() <= LogLevel::Warn {
+            let _ = writeln!(&mut io::stderr(), "{}{}{}", self.format_level(record), self.format_location(record), record.args());
         } else {
-            writeln!(&mut io::stdout(), "{}{}{}", self.format_level(record), self.format_location(record), record.args());
+            let _ = writeln!(&mut io::stdout(), "{}{}{}", self.format_level(record), self.format_location(record), record.args());
         };
     }
 }
 
 
-pub fn init(level: LogLevelFilter) -> Result<(), SetLoggerError> {
+pub fn init(level: LogLevel) -> Result<(), SetLoggerError> {
     let mut logger = Box::new(Logger::new());
     logger.set_level(level);
 
     log::set_logger(|max_level| {
-        max_level.set(level);
+        max_level.set(level.to_log_level_filter());
         logger as Box<Log + 'static>
     })
 }
@@ -97,7 +96,7 @@ pub fn init(level: LogLevelFilter) -> Result<(), SetLoggerError> {
 
 #[cfg(test)]
 mod tests {
-    use log::{Log, LogLevel, LogLevelFilter};
+    use log::{Log, LogLevel};
     use super::{Logger};
     
     #[test]
@@ -108,15 +107,12 @@ mod tests {
         assert!(!logger.enabled(LogLevel::Debug, "crate1"));
         assert!(!logger.enabled(LogLevel::Trace, "crate1"));
 
-        logger.set_level(LogLevelFilter::Off);
-        assert!(!logger.enabled(LogLevel::Error, "crate1"));
-
-        logger.set_level(LogLevelFilter::Debug);
+        logger.set_level(LogLevel::Debug);
         assert!(logger.enabled(LogLevel::Error, "crate1"));
         assert!(logger.enabled(LogLevel::Debug, "crate1"));
         assert!(!logger.enabled(LogLevel::Trace, "crate1"));
 
-        logger.set_level(LogLevelFilter::Trace);
+        logger.set_level(LogLevel::Trace);
         assert!(logger.enabled(LogLevel::Debug, "crate1"));
         assert!(logger.enabled(LogLevel::Trace, "crate1"));
     }
